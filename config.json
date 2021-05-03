@@ -1,13 +1,13 @@
 {
-    "name": "Mnist_LeNet",
+    "name": "superresolution-cnn",
     "n_gpu": 1,
 
     "arch": {
-        "type": "MnistModel",
+        "type": "SRCNNModel",
         "args": {}
     },
     "data_loader": {
-        "type": "MnistDataLoader",
+        "type": "SRDataLoader",
         "args":{
             "data_dir": "data/",
             "batch_size": 128,
