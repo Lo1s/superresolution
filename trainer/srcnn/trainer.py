@@ -1,5 +1,7 @@
 # TODO: refactor train script from trainer into root .py file
 import torch
+import torch.nn as nn
+import torch.optim as optim
 import matplotlib
 import matplotlib.pyplot as plt
 import h5py
@@ -44,3 +46,7 @@ val_loader = DataLoader(val_data, batch_size=batch_size)
 print('Computation device: ', device)
 model = SRCNN().to(device)
 print(model)
+# optimizer
+optimizer = optim.Adam(model.parameters(), lr=lr)
+# loss function
+criterion = nn.MSELoss()
