@@ -5,10 +5,12 @@ import torch.optim as optim
 import matplotlib
 import matplotlib.pyplot as plt
 import h5py
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from datasets.srcnn.tutorial.srcnn_dataset import SRCNNDataset
+from model.srcnn.metric import psnr
 from model.srcnn.model import SRCNN
 
 plt.style.use('ggplot')
@@ -50,3 +52,31 @@ print(model)
 optimizer = optim.Adam(model.parameters(), lr=lr)
 # loss function
 criterion = nn.MSELoss()
+
+def train(model, dataloader):
+    model.train()
+    running_loss = 0.0
+    running_psnr = 0.0
+    for bi, data in tqdm(enumerate(dataloader), total=int(len(train_data) / dataloader.batch_size)):
+        image_data = data[0].to(device)
+        label = data[1].to(device)
+
+        # zero grad the optimizer
+        optimizer.zero_grad()
+        outputs = model(image_data)
+        loss = criterion(outputs, label)
+
+        # backpropagation
+        loss.backward()
+        # update the parameters
+        optimizer.step()
+
+        # add loss of each item (total items in a batch = batch size)
+        running_loss += loss.item()
+        # calculate batch psnr (once every 'batch_size' iterations)
+        batch_psnr = psnr(label, outputs)
+        running_psnr += batch_psnr
+
+    final_loss = running_loss / len(dataloader.dataset)
+    final_psnr = running_psnr / int(len(train_data) / dataloader.batch_size)
+    return final_loss, final_psnr
