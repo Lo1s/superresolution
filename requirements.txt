@@ -10,3 +10,5 @@ pathlib2==2.3.5
 matplotlib==3.3.4
 h5py==2.10.0
 opencv-python-headless==4.5.2.52
+pandas==1.2.4
+tensorboard==1.14.0

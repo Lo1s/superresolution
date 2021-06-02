@@ -1,7 +1,7 @@
 import argparse
 import collections
 import time
-from configparser import ConfigParser
+from parse_config import ConfigParser
 
 import torch
 import torch.nn as nn
