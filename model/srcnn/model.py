@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class SRCNN(nn.Module):
+class SRCNNModel(nn.Module):
     def __init__(self):
-        super(SRCNN, self).__init__()
+        super(SRCNNModel, self).__init__()
 
         self.conv1 = nn.Conv2d(1, 64, kernel_size=9, padding=2, padding_mode='replicate')
         self.conv2 = nn.Conv2d(64, 32, kernel_size=1, padding=2, padding_mode='replicate')

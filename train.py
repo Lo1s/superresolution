@@ -1,20 +1,12 @@
 import argparse
 import collections
-import time
-from parse_config import ConfigParser
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import matplotlib
-import matplotlib.pyplot as plt
-import h5py
+
 import loader.data_loaders as module_data
-from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
-from datasets.srcnn.tutorial.srcnn_dataset import SRCNNDataset
-from trainer.srcnn.trainer import train, validate
-from model.srcnn.model import SRCNN
+import model.srcnn.model as srcnn_model_arch
+from parse_config import ConfigParser
+
 
 # plt.style.use('ggplot')
 # # learning parameters TODO: move it to config file
@@ -59,6 +51,9 @@ from model.srcnn.model import SRCNN
 
 
 # --- REFACTORED ---
+from utils import prepare_device
+
+
 def main(config):
     logger = config.get_logger('train')
 
@@ -67,6 +62,16 @@ def main(config):
     valid_data_loader = data_loader.split_validation()
 
     # build model architecture, then print to console
+    model = config.init_obj('arch', srcnn_model_arch)
+    logger.info(model)
+
+    # prepare for (multi-device) GPU training
+    device, device_ids = prepare_device(config['n_gpu'])
+    model = model.to(device)
+    if len(device_ids) > 1:
+        model = torch.nn.DataParallel(model, device_ids=device_ids)
+
+    # get function handles of loss and metrics
 
 
 if __name__ == '__main__':

@@ -5,11 +5,11 @@ import glob as glob
 import os
 
 from torchvision.utils import save_image
-from model.srcnn.model import SRCNN
+from model.srcnn.model import SRCNNModel
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = SRCNN().to(device)
+model = SRCNNModel().to(device)
 model.load_state_dict(torch.load('data/outputs/model.pth'))
 
 image_paths = glob.glob('data/inputs/tutorial/bicubic_2x/*')
