@@ -1,12 +1,13 @@
 import argparse
 import collections
-
 import torch
-
 import loader.data_loaders as module_data
 import model.srcnn.model as srcnn_model_arch
+import model.srcnn.loss as srcnn_model_loss
+import model.srcnn.metric as srcnn_model_metric
 from parse_config import ConfigParser
-
+from trainer.srcnn.trainer import Trainer
+from utils import prepare_device
 
 # plt.style.use('ggplot')
 # # learning parameters TODO: move it to config file
@@ -51,8 +52,6 @@ from parse_config import ConfigParser
 
 
 # --- REFACTORED ---
-from utils import prepare_device
-
 
 def main(config):
     logger = config.get_logger('train')
@@ -72,6 +71,16 @@ def main(config):
         model = torch.nn.DataParallel(model, device_ids=device_ids)
 
     # get function handles of loss and metrics
+    criterion = getattr(srcnn_model_loss, config['loss'])
+    metrics = getattr(srcnn_model_metric, config['metrics'])
+
+    # build optimizer, learning rate scheduler
+    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+    optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
+    lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
+    trainer = Trainer(
+
+    )
 
 
 if __name__ == '__main__':

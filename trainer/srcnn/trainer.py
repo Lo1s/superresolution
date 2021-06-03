@@ -7,6 +7,14 @@ from tqdm import tqdm
 from model.srcnn.metric import psnr
 
 
+class Trainer(BaseTrainer):
+    """
+    Trainer class
+    """
+    def __init__(self, model, criterion, metric_ftns, optimizer, config, device, data_loader,
+                 valid_data_loader=None, lr_scheduler=None, len_epoch=None):
+        super()
+
 def train(model, dataloader, train_data, optimizer, criterion, device):
     model.train()
     running_loss = 0.0

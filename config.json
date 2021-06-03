@@ -10,7 +10,7 @@
         "type": "SRCNNDataloader",
         "args":{
             "data_dir": "data/inputs/tutorial/train_mscale.h5",
-            "batch_size": 128,
+            "batch_size": 64,
             "shuffle": true,
             "validation_split": 0.25,
             "num_workers": 2
@@ -21,12 +21,12 @@
         "args":{
             "lr": 0.001,
             "weight_decay": 0,
-            "amsgrad": true
+            "amsgrad": false
         }
     },
-    "loss": "nll_loss",
+    "loss": "mse_loss",
     "metrics": [
-        "accuracy", "top_k_acc"
+        "psnr"
     ],
     "lr_scheduler": {
         "type": "StepLR",
