@@ -72,16 +72,19 @@ def main(config):
 
     # get function handles of loss and metrics
     criterion = getattr(srcnn_model_loss, config['loss'])
-    metrics = getattr(srcnn_model_metric, config['metrics'])
+    metrics = [getattr(srcnn_model_metric, met) for met in config['metrics']]
 
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
     lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
-    trainer = Trainer(
-
-    )
-
+    trainer = Trainer(model, criterion, metrics, optimizer,
+                      config=config,
+                      device=device,
+                      data_loader=data_loader,
+                      valid_data_loader=valid_data_loader,
+                      lr_scheduler=lr_scheduler)
+    trainer.train()
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='SRCNN')
