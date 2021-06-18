@@ -1,6 +1,8 @@
 import argparse
 import collections
 import torch
+from tqdm import tqdm
+
 import loader.data_loaders as module_data
 import model.srcnn.model as srcnn_model_arch
 import model.srcnn.loss as srcnn_model_loss
