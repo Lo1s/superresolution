@@ -21,7 +21,7 @@ class BaseDataLoader(DataLoader):
         self.init_kwargs = {
             'dataset': dataset,
             'batch_size': batch_size,
-            'shuffle': self.shuffle,
+            'shuffle': shuffle,
             'collate_fn': collate_fn,
             'num_workers': num_workers
         }
@@ -43,7 +43,7 @@ class BaseDataLoader(DataLoader):
         else:
             len_valid = int(self.n_samples * split)
 
-        valid_idx = idx_full[0: len_valid]
+        valid_idx = idx_full[0:len_valid]
         train_idx = np.delete(idx_full, np.arange(0, len_valid))
 
         train_sampler = SubsetRandomSampler(train_idx)

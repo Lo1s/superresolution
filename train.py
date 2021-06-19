@@ -42,7 +42,8 @@ def main(config):
                       device=device,
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
-                      lr_scheduler=lr_scheduler)
+                      lr_scheduler=lr_scheduler,
+                      logging=False)
     trainer.train()
 
 
@@ -61,50 +62,6 @@ if __name__ == '__main__':
     ]
     config = ConfigParser.from_args(args, options)
     main(config)
-
-# if __name__ == '__main__':
-#     train_loss, val_loss = [], []
-#     train_psnr, val_psnr = [], []
-#     start = time.time()
-#
-#     # TODO: consider these plots
-#     epochs = 1
-#     for epoch in range(epochs):
-#         print(f'Epoch {epoch + 1} of {epochs}')
-#         train_epoch_loss, train_epoch_psnr = train(model, train_loader, train_data, optimizer, criterion, device)
-#         val_epoch_loss, val_epoch_psnr = validate(model, val_loader, val_data, epoch, criterion, device)
-#         print(f'Train PSNR: {train_epoch_psnr:.3f}')
-#         print(f'Val PSNR: {val_epoch_psnr:.3f}')
-#         train_loss.append(train_epoch_loss)
-#         train_psnr.append(train_epoch_psnr)
-#         val_loss.append(val_epoch_loss)
-#         val_psnr.append(val_epoch_psnr)
-#     end = time.time()
-#     print(f'Finished training in: {((end - start) / 60):.3f} minutes')
-#
-#     # loss plots
-#     plt.figure(figsize=(10, 7))
-#     plt.plot(train_loss, color='orange', label='train loss')
-#     plt.plot(val_loss, color='red', label='validation loss')
-#     plt.xlabel('Epochs')
-#     plt.ylabel('Loss')
-#     plt.legend()
-#     plt.savefig('data/outputs/loss.png')
-#     plt.show()
-#
-#     # psnr plots
-#     plt.figure(figsize=(10, 7))
-#     plt.plot(train_psnr, color='green', label='train PSNR dB')
-#     plt.plot(val_psnr, color='blue', label='validation PSNR dB')
-#     plt.xlabel('Epochs')
-#     plt.ylabel('PSNR (dB)')
-#     plt.legend()
-#     plt.savefig('data/outputs/psnr.png')
-#     plt.show()
-#
-#     # save model to disk
-#     print('Saving model...')
-#     torch.save(model.state_dict(), 'data/saved/models/bw_tutorial_model.pth')
 
 
 

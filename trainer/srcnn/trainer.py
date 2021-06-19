@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 from pathlib import Path
 from torchvision.utils import save_image, make_grid
 from tqdm import tqdm
@@ -14,7 +15,7 @@ class Trainer(BaseTrainer):
     """
 
     def __init__(self, model, criterion, metric_ftns, optimizer, config, device, data_loader,
-                 valid_data_loader=None, lr_scheduler=None, len_epoch=None):
+                 valid_data_loader=None, lr_scheduler=None, len_epoch=None, logging=True):
         super().__init__(model, criterion, metric_ftns, optimizer, config)
         self.config = config
         self.device = device
@@ -30,6 +31,7 @@ class Trainer(BaseTrainer):
         self.do_validation = self.valid_data_loader is not None
         self.lr_scheduler = lr_scheduler
         self.log_step = int(np.sqrt(data_loader.batch_size))
+        self.logging = logging
 
         self.train_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
         self.valid_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
@@ -44,6 +46,7 @@ class Trainer(BaseTrainer):
         self.train_metrics.reset()
         for batch_idx, (data, target) in enumerate(tqdm(self.data_loader)):
             data, target = data.to(self.device), target.to(self.device)
+
             self.optimizer.zero_grad()
             output = self.model(data)
             loss = self.criterion(output, target)
@@ -55,7 +58,7 @@ class Trainer(BaseTrainer):
             for met in self.metric_ftns:
                 self.train_metrics.update(met.__name__, met(output, target))
 
-            if batch_idx % self.log_step == 0:
+            if batch_idx % self.log_step == 0 and self.logging:
                 self.logger.debug('\nTrain Epoch: {} {} Loss: {:.6f}'.format(
                     epoch,
                     self._progress(batch_idx),
@@ -64,14 +67,14 @@ class Trainer(BaseTrainer):
 
             if batch_idx == self.len_epoch:
                 break
-            log = self.train_metrics.result()
+        log = self.train_metrics.result()
 
-            if self.do_validation:
-                val_log = self._valid_epoch(epoch)
-                log.update({'val_' + k: v for k, v in val_log.items()})
+        if self.do_validation:
+            val_log = self._valid_epoch(epoch)
+            log.update(**{'val_'+k : v for k, v in val_log.items()})
 
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.step()
         return log
 
     def _valid_epoch(self, epoch):
