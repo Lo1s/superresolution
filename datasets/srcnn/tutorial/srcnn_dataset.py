@@ -6,7 +6,8 @@ from torch.utils.data import Dataset
 class SRCNNDataset(Dataset):
     def __init__(self, root):
         file = h5py.File(root, mode='r')
-        # in_train has shape (21824, 33, 33, 1) => 21824 images of size 33x33 with 1 color channel
+        # train_mscale.h5 has shape (21824, 33, 33, 1) => 21824 images of size 33x33 with 1 color channel
+        # train_mscale_3ch.h5 has shape (182000, 33, 33, 3) => 23760 images of size 33x33 with 3 color channels
         in_train = file['data'][:]  # training data
         out_train = file['label'][:]  # training labels
         file.close()
