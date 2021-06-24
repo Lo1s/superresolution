@@ -5,6 +5,8 @@ from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
 
+import torchvision
+
 
 def ensure_dir(dirname):
     dirname = Path(dirname)
@@ -46,6 +48,23 @@ def prepare_device(n_gpu_use):
     device = torch.device('cuda:0' if n_gpu_use > 0 else 'cpu')
     list_ids = list(range(n_gpu_use))
     return device, list_ids
+
+
+def save_predictions_as_imgs(
+    loader, model, folder="saved_images/", device="cuda"
+):
+    model.eval()
+    for idx, (x, y) in enumerate(loader):
+        x = x.to(device=device)
+        with torch.no_grad():
+            preds = torch.sigmoid(model(x))
+            preds = (preds > 0.5).float()
+        torchvision.utils.save_image(
+            preds, f"{folder}/pred_{idx}.png"
+        )
+        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}{idx}.png")
+
+    model.train()
 
 
 class MetricTracker:

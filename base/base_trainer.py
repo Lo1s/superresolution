@@ -2,6 +2,7 @@ import torch
 from abc import abstractmethod
 from numpy import inf
 from logger import TensorboardWriter
+from test import save_predictions_as_imgs
 
 
 class BaseTrainer:
@@ -116,6 +117,9 @@ class BaseTrainer:
         filename = str(self.checkpoint_dir / 'checkpoint-epoch{}.pth'.format(epoch))
         torch.save(state, filename)
         self.logger.info("Saving checkpoint: {} ...".format(filename))
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        checkpoint_path_parts = self.checkpoint_dir.parts
+        save_predictions_as_imgs(self.model, device, epoch, checkpoint_path_parts[-1])
         if save_best:
             best_path = str(self.checkpoint_dir / 'model_best.pth')
             torch.save(state, best_path)
