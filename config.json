@@ -3,13 +3,13 @@
     "n_gpu": 1,
 
     "arch": {
-        "type": "SRCNNModel",
+        "type": "UNet",
         "args": {}
     },
     "data_loader": {
         "type": "SRCNNDataloader",
         "args":{
-            "data_dir": "data/inputs/tutorial/train_mscale.h5",
+            "data_dir": "data/inputs/tutorial/train_mscale_3ch.h5",
             "batch_size": 64,
             "shuffle": false,
             "validation_split": 0.25,

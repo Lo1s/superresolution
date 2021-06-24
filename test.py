@@ -1,46 +1,50 @@
+import os.path as osp
+import glob
+from datetime import datetime
 from os import mkdir
+from os import path
+from sys import exit
 
-import torch
 import cv2
 import numpy as np
-import glob as glob
-import os
+import torch
+from model.unet.model import UNet
 
-from torchvision.utils import save_image
-from model.srcnn.model import SRCNNModel
-from datetime import datetime
-from os import path
+model_path = 'data/saved/models/models/superresolution-cnn/0624_075046/checkpoint-epoch32.pth'
+test_img_folder = 'data/inputs/tutorial/Set5/*'
 
-
-now = datetime.now()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = SRCNNModel().to(device)
-saved_model = torch.load('data/saved/models/models/superresolution-cnn/0619_131607/model_best.pth')
+model = UNet().to(device)
+saved_model = torch.load(model_path)
 model.load_state_dict(saved_model['state_dict'])
+model.eval()
 
-image_paths = glob.glob('data/inputs/tutorial/bicubic_2x/*')
-for image_path in image_paths:
-    image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-    test_image_name = image_path.split(os.path.sep)[-1].split('.')[0]
+print('Model path {:s}. \nTesting...'.format(model_path))
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    image = image.reshape(image.shape[0], image.shape[1], 1)
+idx = 0
+now = datetime.now()
+datetime_dir = f'data/outputs/{now.strftime("%Y%m%d%H%M%S")}'
+if not path.exists(datetime_dir):
+    mkdir(datetime_dir)
 
-    datetime_dir = f'data/outputs/{now.strftime("%Y%m%d%H%M%S")}'
-    if not path.exists(datetime_dir):
-        mkdir(datetime_dir)
-    cv2.imwrite(f'{datetime_dir}/test_{test_image_name}.png', image)
-    image = image / 255  # normalize the pixel value
 
-    model.eval()
+for image_path in glob.glob(test_img_folder):
+    idx += 1
+    base = osp.splitext(osp.basename(image_path))[0]
+    print(idx, base)
+    # read images
+    img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    cv2.imwrite(f'{datetime_dir}/test_{base}.png', img)
+    img = img * 1.0 / 255
+    img = torch.from_numpy(np.transpose(img[:, :, [2, 1, 0]], (2, 0, 1))).float()
+    img_LR = img.unsqueeze(0)
+    img_LR = img_LR.to(device)
+
     with torch.no_grad():
-        image = np.transpose(image, (2, 0, 1)).astype(np.float32)
-        image = torch.tensor(image, dtype=torch.float).to(device)
-        image = image.unsqueeze(0)
-        outputs = model(image)
+        output = model(img_LR).data.squeeze().float().cpu().clamp_(0, 1).numpy()
+    output = np.transpose(output[[2, 1, 0], :, :], (1, 2, 0))
+    output = (output * 255.0).round()
 
-    outputs = outputs.cpu()
-    save_image(outputs, f'{datetime_dir}/output_{test_image_name}.png')
-    outputs = outputs.detach().numpy()
-    outputs = outputs.reshape(outputs.shape[2], outputs.shape[3], outputs.shape[1])
-    print(outputs.shape)
+    cv2.imwrite(f'{datetime_dir}/output_{base}.png', output)
+
+exit()

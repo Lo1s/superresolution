@@ -8,34 +8,44 @@ import numpy as np
 import random
 from matplotlib import pyplot as plt
 from matplotlib import image
+from numpy.random import RandomState
 from sklearn.datasets import load_sample_image
 from sklearn.feature_extraction import image as sklearn_image
 from skimage import transform
 from tqdm import tqdm
 
-file = h5py.File('../data/inputs/tutorial/train_mscale.h5', mode='r')
-example_data = file['data'][0]
-example_label = file['label'][0]
 
-# test = example_data.reshape(example_data.shape[1], example_data.shape[2], example_data.shape[0])
-# print(test.shape)
-#
-# plt.imshow(test)
-# plt.show()
+def create_patches(data_imgs, label_imgs, patch_size=(33, 33), create_random_sample=False, num_patches=1000):
+    data_ext_patches = sklearn_image.extract_patches_2d(
+        data_imgs,
+        patch_size,
+        max_patches=num_patches if create_random_sample else None,
+        random_state=1
+    )
+    label_ext_patches = sklearn_image.extract_patches_2d(
+        label_imgs,
+        patch_size,
+        max_patches=num_patches if create_random_sample else None,
+        random_state=1
+    )
+    return data_ext_patches, label_ext_patches
 
 
-def create_patches(data_img, label_img, patch_size=(33, 33), create_random_sample=False, num_patches=1000):
-    data_ext_patches = sklearn_image.extract_patches_2d(data_img, patch_size)
-    label_ext_patches = sklearn_image.extract_patches_2d(label_img, patch_size)
-    # print(f'Patches shape: {image_patches.shape}')
-    if create_random_sample:
-        random_idx = sample(range(0, data_ext_patches.shape[0]), num_patches)
-        data_sample_patches = np.asarray([data_ext_patches[idx] for idx in random_idx])
-        label_sample_patches = np.asarray([label_ext_patches[idx] for idx in random_idx])
-        # print(f'Size of the sample patches: {sample_patches.shape}')
-        return data_sample_patches, label_sample_patches
-    else:
-        return data_ext_patches, label_ext_patches
+def create_scaled_patches(data_imgs, scale=3, target_patch_size=(60, 60), create_random_sample=False, num_patches=1000):
+    label_ext_patches = sklearn_image.extract_patches_2d(
+        data_imgs,
+        target_patch_size,
+        max_patches=num_patches if create_random_sample else None,
+        random_state=1
+    )
+
+    data_ext_patches = []
+    for label_patch in label_ext_patches:
+        height, width, channels = label_patch.shape[0], label_patch.shape[1], label_patch.shape[2]
+        downscale_size = (int(height * 1 / scale), int(width * 1 / scale), channels)
+        data_patch = transform.resize(label_patch, downscale_size, order=scale)
+        data_ext_patches.append(data_patch)
+    return data_ext_patches, label_ext_patches
 
 
 def save_patches_to_HDF5(filepath, data_patches, label_patches):
@@ -81,7 +91,7 @@ def modcrop(img, modulo):
 if __name__ == '__main__':
     data_patches = []
     label_patches = []
-    num_patches = 2000
+    num_patches = 500
     scale = 3
     # dataset can be found on https://drive.google.com/drive/folders/1B3DJGQKB6eNdwuQIhdskA64qUuVKLZ9u
     path = '../data/inputs/tutorial/T91/'
@@ -98,21 +108,28 @@ if __name__ == '__main__':
         downscaled_image = transform.resize(label_image, downscale_size, order=3)
         data_image = transform.resize(downscaled_image, label_size, order=3)
         # print(f'Image ({filepath} shape: {np.shape(image_file)}')
-        data_p, label_p = create_patches(data_image, label_image, create_random_sample=True, num_patches=num_patches)
-        data_patches.extend(data_p)
-        label_patches.extend(label_p)
+        image_size = image_file.shape
+        target_patch_size = (192, 192)
+        if (image_size[0] > target_patch_size[0]) and (image_size[1] > target_patch_size[1]):
+            data_p, label_p = create_scaled_patches(image_file, scale=3, target_patch_size=target_patch_size,
+                                                    create_random_sample=True, num_patches=num_patches)
+            data_patches.extend(data_p)
+            label_patches.extend(label_p)
 
     if len(data_patches) != patches_total:
         print(f'Total number of data_patches={len(data_patches)} is not equal to '
               f'num_patches={num_patches} * number of images={len(dir_contents)}')
-    print(f'Total data patches size: {np.shape(label_patches)}')
+    print(f'Total data patches size: {np.shape(data_patches)}')
 
     if len(label_patches) != patches_total:
         print(f'Total number of label_patches={len(label_patches)} is not equal to '
               f'num_patches={num_patches} * number of images={len(dir_contents)}')
     print(f'Total label patches size: {np.shape(label_patches)}')
 
-    save_patches_to_HDF5('../data/inputs/tutorial/train_mscale_3ch.h5', data_patches, label_patches)
+    save_patches_to_HDF5(
+        '../data/inputs/tutorial/train_mscale_3ch.h5',
+        np.reshape(data_patches, (np.shape(data_patches)[0], np.shape(data_patches)[3], np.shape(data_patches)[1], np.shape(data_patches)[2])),
+        np.reshape(label_patches, (np.shape(label_patches)[0], np.shape(label_patches)[3], np.shape(label_patches)[1], np.shape(label_patches)[2])))
 
     read_saved_file = h5py.File('../data/inputs/tutorial/train_mscale_3ch.h5', mode='r')
     data = read_saved_file['data'][:]

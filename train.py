@@ -1,12 +1,16 @@
 import argparse
 import collections
 import torch
+from torchvision import models
 from tqdm import tqdm
 
 import loader.data_loaders as module_data
 import model.srcnn.model as srcnn_model_arch
 import model.srcnn.loss as srcnn_model_loss
 import model.srcnn.metric as srcnn_model_metric
+import model.unet.model as unet_model_arch
+import model.unet.loss as unet_model_loss
+from model.unet.loss import create_loss_model
 from parse_config import ConfigParser
 from trainer.srcnn.trainer import Trainer
 from utils import prepare_device
@@ -20,7 +24,8 @@ def main(config):
     valid_data_loader = data_loader.split_validation()
 
     # build model architecture, then print to console
-    model = config.init_obj('arch', srcnn_model_arch)
+    #model = config.init_obj('arch', srcnn_model_arch)
+    model = config.init_obj('arch', unet_model_arch)
     logger.info(model)
 
     # prepare for (multi-device) GPU training
@@ -43,7 +48,8 @@ def main(config):
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
                       lr_scheduler=lr_scheduler,
-                      logging=False)
+                      logging=False,
+                      use_vgg_loss=True)
     trainer.train()
 
 

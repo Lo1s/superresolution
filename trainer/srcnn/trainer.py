@@ -2,10 +2,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 from pathlib import Path
+
+from torchvision import models
 from torchvision.utils import save_image, make_grid
 from tqdm import tqdm
 from base import BaseTrainer
 from model.srcnn.metric import psnr
+from model.unet.loss import create_loss_model
 from utils import inf_loop, MetricTracker
 
 
@@ -15,7 +18,7 @@ class Trainer(BaseTrainer):
     """
 
     def __init__(self, model, criterion, metric_ftns, optimizer, config, device, data_loader,
-                 valid_data_loader=None, lr_scheduler=None, len_epoch=None, logging=True):
+                 valid_data_loader=None, lr_scheduler=None, len_epoch=None, logging=True, use_vgg_loss=False):
         super().__init__(model, criterion, metric_ftns, optimizer, config)
         self.config = config
         self.device = device
@@ -33,6 +36,13 @@ class Trainer(BaseTrainer):
         self.log_step = int(np.sqrt(data_loader.batch_size))
         self.logging = logging
 
+        # vgg loss
+        vgg16 = models.vgg16(pretrained=True).features
+        if torch.cuda.is_available():
+            vgg16.cuda(device=device)
+        self.vgg_loss = create_loss_model(vgg16, 8, use_cuda=torch.cuda.is_available(), device=device)
+        self.use_vgg_loss = use_vgg_loss
+
         self.train_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
         self.valid_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
 
@@ -49,7 +59,14 @@ class Trainer(BaseTrainer):
 
             self.optimizer.zero_grad()
             output = self.model(data)
-            loss = self.criterion(output, target)
+
+            if self.use_vgg_loss:
+                output_vgg_loss = self.vgg_loss(output)
+                target_vgg_loss = self.vgg_loss(target)
+                loss = self.criterion(output_vgg_loss, target_vgg_loss)
+            else:
+                loss = self.criterion(output, target)
+
             loss.backward()
             self.optimizer.step()
 
@@ -88,9 +105,14 @@ class Trainer(BaseTrainer):
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(self.valid_data_loader):
                 data, target = data.to(self.device), target.to(self.device)
-
                 output = self.model(data)
-                loss = self.criterion(output, target)
+
+                if self.use_vgg_loss:
+                    output_vgg_loss = self.vgg_loss(output)
+                    target_vgg_loss = self.vgg_loss(target)
+                    loss = self.criterion(output_vgg_loss, target_vgg_loss)
+                else:
+                    loss = self.criterion(output, target)
 
                 self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                 self.valid_metrics.update('loss', loss.item())
