@@ -13,7 +13,7 @@ from utils.image import show_images_side2side
 import matplotlib.image as mpimg
 
 
-def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='data/inputs/tutorial/Set5/*'):
+def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='data/inputs/Set5/*'):
     idx = 0
     save_dir = f'data/saved/models/superresolution-cnn/{datetime_dir}'
     if not path.exists(save_dir):
@@ -44,28 +44,26 @@ def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='d
         img2 = mpimg.imread(test_output_path)
         show_images_side2side(img1, img2)
 
-        break
-
 
 if __name__ == '__main__':
-    use_best_model = False
-    model_date_dir = '0624_050830'
+    use_best_model = True
+    model_date_dir = '0624_184207'
     dev = 'cuda' if torch.cuda.is_available() else 'cpu'
     default_model = UNet().to(dev)
 
     if use_best_model:
-        model_path = f'data/saved/models/models/superresolution-cnn/{model_date_dir}/model_best.pth'
+        model_path = f'data/saved/models/superresolution-cnn/{model_date_dir}/model_best.pth'
         print('Model path {:s}. \nTesting...'.format(model_path))
         saved_model = torch.load(model_path)
         default_model.load_state_dict(saved_model['state_dict'])
         save_predictions_as_imgs(default_model, dev, 'best', model_date_dir)
     else:
-        model_paths = glob.glob(f'data/saved/models/models/superresolution-cnn/{model_date_dir}/*')
+        model_paths = glob.glob(f'data/saved/models/superresolution-cnn/{model_date_dir}/*')
         checkpoints = list(filter(lambda path: 'checkpoint' in path, model_paths))
         checkpoints.sort()
         for model_path in checkpoints:
             filename_idx = osp.splitext(osp.basename(model_path))[0][-3:]
             saved_model = torch.load(model_path)
             default_model.load_state_dict(saved_model['state_dict'])
-            save_predictions_as_imgs(default_model, dev, filename_idx, save_d)
+            save_predictions_as_imgs(default_model, dev, filename_idx, model_date_dir)
 

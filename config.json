@@ -9,7 +9,7 @@
     "data_loader": {
         "type": "SRCNNDataloader",
         "args":{
-            "data_dir": "data/inputs/tutorial/train_mscale_3ch.h5",
+            "data_dir": "data/inputs/train_mscale_3ch.h5",
             "batch_size": 64,
             "shuffle": false,
             "validation_split": 0.25,
@@ -36,7 +36,7 @@
         }
     },
     "trainer": {
-        "epochs": 100,
+        "epochs": 200,
 
         "save_dir": "data/saved/",
         "save_period": 1,

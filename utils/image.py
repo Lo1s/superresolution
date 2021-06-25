@@ -94,7 +94,7 @@ if __name__ == '__main__':
     num_patches = 500
     scale = 3
     # dataset can be found on https://drive.google.com/drive/folders/1B3DJGQKB6eNdwuQIhdskA64qUuVKLZ9u
-    path = '../data/inputs/tutorial/T91/'
+    path = '../data/inputs/T91/'
     dir_contents = listdir(path)
     print(f'Number of files: {len(dir_contents)}')
     patches_total = num_patches * len(dir_contents)
@@ -127,11 +127,11 @@ if __name__ == '__main__':
     print(f'Total label patches size: {np.shape(label_patches)}')
 
     save_patches_to_HDF5(
-        '../data/inputs/tutorial/train_mscale_3ch.h5',
+        '../data/inputs/train_mscale_3ch.h5',
         np.reshape(data_patches, (np.shape(data_patches)[0], np.shape(data_patches)[3], np.shape(data_patches)[1], np.shape(data_patches)[2])),
         np.reshape(label_patches, (np.shape(label_patches)[0], np.shape(label_patches)[3], np.shape(label_patches)[1], np.shape(label_patches)[2])))
 
-    read_saved_file = h5py.File('../data/inputs/tutorial/train_mscale_3ch.h5', mode='r')
+    read_saved_file = h5py.File('../data/inputs/train_mscale_3ch.h5', mode='r')
     data = read_saved_file['data'][:]
     label = read_saved_file['label'][:]
     print(f'Saved Data patches size = {np.shape(data)} \nSaved Label patches size = {np.shape(label)}')

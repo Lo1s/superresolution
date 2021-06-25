@@ -3,98 +3,86 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def double_conv(in_channels, out_channels):
-    return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), padding=(1, 1)),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(out_channels, out_channels, kernel_size=(3, 3), padding=(1, 1)),
-        nn.ReLU(inplace=True)
-    )
+# to minimize checkerboard pattern
+class ResizeConvolution(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(ResizeConvolution, self).__init__()
+        self.resize_conv = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode='bilinear'),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(in_channels, out_channels,
+                      kernel_size=(3, 3), stride=(1, 1), padding=(0, 0))
+        )
+
+    def forward(self, x):
+        return self.resize_conv(x)
 
 
-def crop_img(tensor_img, target_tensor_img):
-    target_size = target_tensor_img.size()[2]
-    tensor_size = tensor_img.size()[2]
-    delta = tensor_size - target_size
-    delta = delta // 2
-    return tensor_img[:, :, delta:tensor_size - delta, delta:tensor_size - delta]
+class DoubleConv(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DoubleConv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), padding=(1, 1), bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=(3, 3), padding=(1, 1), bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        return self.conv(x)
 
 
 class UNet(nn.Module):
 
-    def __init__(self):
+    def __init__(self, in_channels=3, out_channels=3, scale=3, features=None):
         super(UNet, self).__init__()
+        if features is None:
+            features = [64, 128, 256, 512]
+        self.downs = nn.ModuleList()
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.ups = nn.ModuleList()
 
-        # encoder
-        self.max_pool_2x2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2_down_1 = double_conv(3, 64)
-        self.conv2_down_2 = double_conv(64, 128)
-        self.conv2_down_3 = double_conv(128, 256)
-        self.conv2_down_4 = double_conv(256, 512)
-        self.conv2_down_5 = double_conv(512, 1024)
+        # Encoder/Down part of UNet
+        for feature in features:
+            self.downs.append(DoubleConv(in_channels, feature))
+            in_channels = feature
 
-        # center
-        self.conv2_center = nn.Sequential(
-            nn.Conv2d(1024, 1024, kernel_size=(1, 1)),
-            nn.ReLU(inplace=True)
-        )
+        # Center/Bottleneck part
+        self.bottleneck = DoubleConv(features[-1], features[-1]*2)
 
-        # decoder
-        self.conv_trans_1 = nn.ConvTranspose2d(1024, 512, kernel_size=(2, 2), stride=(2, 2))
-        self.conv2_up_1 = double_conv(1024, 512)
-        self.conv_trans_2 = nn.ConvTranspose2d(512, 256, kernel_size=(2, 2), stride=(2, 2))
-        self.conv2_up_2 = double_conv(512, 256)
-        self.conv_trans_3 = nn.ConvTranspose2d(256, 128, kernel_size=(2, 2), stride=(2, 2))
-        self.conv2_up_3 = double_conv(256, 128)
-        self.conv_trans_4 = nn.ConvTranspose2d(128, 64, kernel_size=(2, 2), stride=(2, 2))
-        self.conv2_up_4 = double_conv(128, 64)
-        # output layer
-        self.conv1_output = nn.Conv2d(64, 3 * (3 ** 2), kernel_size=(3, 3), padding=(1, 1))
-        self.pixel_shuffle = nn.PixelShuffle(3)
+        # Decoder/Up part of UNet
+        for feature in reversed(features):
+            self.ups.append(
+                ResizeConvolution(feature*2, feature)
+            )
+            self.ups.append(DoubleConv(feature*2, feature))
+
+        self.conv1_output = nn.Conv2d(features[0], scale * (out_channels ** 2), kernel_size=(3, 3), padding=(1, 1))
+        self.pixel_shuffle = nn.PixelShuffle(scale)
         self.output_activation = nn.Sigmoid()
 
-    def forward(self, image):
-        # image (batch_size, channels, height, width)
-        # encoder
-        # 1. block
-        x1 = self.conv2_down_1(image)  # copy to decoder part
-        x2 = self.max_pool_2x2(x1)
-        # 2. block
-        x3 = self.conv2_down_2(x2)  # copy to decoder part
-        x4 = self.max_pool_2x2(x3)
-        # 3. block
-        x5 = self.conv2_down_3(x4)  # copy to decoder part
-        x6 = self.max_pool_2x2(x5)
-        # 4. block
-        x7 = self.conv2_down_4(x6)  # copy to decoder part
-        x8 = self.max_pool_2x2(x7)
-        # 5. block
-        x9 = self.conv2_down_5(x8)
+    def forward(self, x):
+        skip_connections = []
 
-        # center
-        x_center = self.conv2_center(x9)
+        for down in self.downs:
+            x = down(x)
+            skip_connections.append(x)
+            x = self.pool(x)
 
-        # decoder
-        # 1. block
-        x = self.conv_trans_1(x_center)
-        x7_cropped = crop_img(x7, x)
-        x = torch.cat([x, x7_cropped], 1)
-        x = self.conv2_up_1(x)
-        # 2. block
-        x = self.conv_trans_2(x)
-        x5_cropped = crop_img(x5, x)
-        x = torch.cat([x, x5_cropped], 1)
-        x = self.conv2_up_2(x)
-        # 3. block
-        x = self.conv_trans_3(x)
-        x3_cropped = crop_img(x3, x)
-        x = torch.cat([x, x3_cropped], 1)
-        x = self.conv2_up_3(x)
-        # 4. block
-        x = self.conv_trans_4(x)
-        x1_cropped = crop_img(x1, x)
-        x = torch.cat([x, x1_cropped], 1)
-        x = self.conv2_up_4(x)
+        x = self.bottleneck(x)
+        skip_connections = skip_connections[::-1]
+
+        steps = 2
+        for idx in range(0, len(self.ups), steps):
+            x = self.ups[idx](x)
+            skip_connection = skip_connections[idx//steps]
+            if x.shape != skip_connection.shape:
+                skip_connection = F.interpolate(skip_connection, size=x.shape[2:])
+            x = torch.cat([x, skip_connection], dim=1)
+            x = self.ups[idx+1](x)
+
         x = self.conv1_output(x)
         x = self.pixel_shuffle(x)
         x = self.output_activation(x)
@@ -107,4 +95,4 @@ if __name__ == '__main__':
     print(model)
     output = model(test_image)
     print(output)
-    print(output.size())
+    print(output.size())  # ([64, 3, 192, 192])
