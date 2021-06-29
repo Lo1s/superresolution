@@ -1,11 +1,12 @@
 import json
 import torch
 import pandas as pd
+import model.esrgan as models
+import torchvision
+
 from pathlib import Path
 from itertools import repeat
 from collections import OrderedDict
-
-import torchvision
 
 
 def ensure_dir(dirname):
@@ -65,6 +66,25 @@ def save_predictions_as_imgs(
         torchvision.utils.save_image(y.unsqueeze(1), f"{folder}{idx}.png")
 
     model.train()
+
+
+def configure(arch, pretrained, logger):
+    """Global profile.
+    Args:
+        :param logger:
+        :param arch:
+        :param pretrained:
+    """
+
+    # Create model
+    if pretrained:
+        logger.info(f"Using pre-trained model `{arch}`.")
+        model = models.__dict__[arch](pretrained=True)
+    else:
+        logger.info(f"Creating model `{arch}`.")
+        model = models.__dict__[arch]()
+
+    return model
 
 
 class MetricTracker:

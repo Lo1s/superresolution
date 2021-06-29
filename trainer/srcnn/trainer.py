@@ -7,21 +7,22 @@ from torchvision import models
 from torchvision.utils import save_image, make_grid
 from tqdm import tqdm
 from base import BaseTrainer
+from model.esrgan.utils import SINGLE_KEY
 from model.srcnn.metric import psnr
 from model.unet.loss import create_loss_model
 from utils import inf_loop, MetricTracker
 
 
-class Trainer(BaseTrainer):
+class SRCNNTrainer(BaseTrainer):
     """
     Trainer class
     """
 
     def __init__(self, model, criterion, metric_ftns, optimizer, config, device, data_loader,
-                 valid_data_loader=None, lr_scheduler=None, len_epoch=None, logging=True, use_vgg_loss=False):
-        super().__init__(model, criterion, metric_ftns, optimizer, config)
+                 valid_data_loader=None, lr_scheduler=None, len_epoch=None, logging=True, use_vgg_loss=False,
+                 monitor_cfg_key='monitor'):
+        super().__init__([model], criterion, metric_ftns, [optimizer], config, device, monitor_cfg_key=monitor_cfg_key)
         self.config = config
-        self.device = device
         self.data_loader = data_loader
         if len_epoch is None:
             # epoch-based training
@@ -52,13 +53,13 @@ class Trainer(BaseTrainer):
         :param epoch: Integer, current training epoch.
         :return: A log that contains average loss and metric in this epoch.
         """
-        self.model.train()
+        self.models[SINGLE_KEY].train()
         self.train_metrics.reset()
         for batch_idx, (data, target) in enumerate(tqdm(self.data_loader)):
             data, target = data.to(self.device), target.to(self.device)
 
-            self.optimizer.zero_grad()
-            output = self.model(data)
+            self.optimizers[SINGLE_KEY].zero_grad()
+            output = self.models[SINGLE_KEY](data)
 
             if self.use_vgg_loss:
                 output_vgg_loss = self.vgg_loss(output)
@@ -68,7 +69,7 @@ class Trainer(BaseTrainer):
                 loss = self.criterion(output, target)
 
             loss.backward()
-            self.optimizer.step()
+            self.optimizers[SINGLE_KEY].step()
 
             self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
             self.train_metrics.update('loss', loss.item())
@@ -100,12 +101,12 @@ class Trainer(BaseTrainer):
         :param epoch: Integer, current training epoch.
         :return: A log that contains information about validation
         """
-        self.model.eval()
+        self.models[SINGLE_KEY].eval()
         self.valid_metrics.reset()
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(self.valid_data_loader):
                 data, target = data.to(self.device), target.to(self.device)
-                output = self.model(data)
+                output = self.models[SINGLE_KEY](data)
 
                 if self.use_vgg_loss:
                     output_vgg_loss = self.vgg_loss(output)
@@ -121,7 +122,7 @@ class Trainer(BaseTrainer):
                 self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
         # add histogram of the model parameters to the tensorboard
-        for name, p in self.model.named_parameters():
+        for name, p in self.models[SINGLE_KEY].named_parameters():
             self.writer.add_histogram(name, p, bins='auto')
         return self.valid_metrics.result()
 

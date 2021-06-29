@@ -13,7 +13,7 @@ from utils.image import show_images_side2side
 import matplotlib.image as mpimg
 
 
-def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='data/inputs/Set5/*'):
+def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='data/inputs/Set5/*', plot_images=True):
     idx = 0
     save_dir = f'data/saved/models/superresolution-cnn/{datetime_dir}'
     if not path.exists(save_dir):
@@ -40,14 +40,15 @@ def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='d
         cv2.imwrite(test_output_path, output)
         print(f'Saving {idx}.) filename={base}, test_image={test_file_path}, output_image={test_output_path}')
 
-        img1 = mpimg.imread(test_file_path)
-        img2 = mpimg.imread(test_output_path)
-        show_images_side2side(img1, img2)
+        if plot_images:
+            img1 = mpimg.imread(test_file_path)
+            img2 = mpimg.imread(test_output_path)
+            show_images_side2side(img1, img2)
 
 
 if __name__ == '__main__':
     use_best_model = True
-    model_date_dir = '0624_184207'
+    model_date_dir = '0625_153809'
     dev = 'cuda' if torch.cuda.is_available() else 'cpu'
     default_model = UNet().to(dev)
 

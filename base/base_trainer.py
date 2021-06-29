@@ -1,27 +1,40 @@
+import os
 import torch
+import torchvision.transforms as transforms
+import torchvision.utils as vutils
+from PIL import Image
 from abc import abstractmethod
 from numpy import inf
 from logger import TensorboardWriter
+from model.esrgan.utils.utils import SINGLE_KEY, GENERATOR_KEY, DISCRIMINATOR_KEY
 from test import save_predictions_as_imgs
+
+# Load base low-resolution image.
+fixed_lr = transforms.ToTensor()(Image.open(os.path.join("data/inputs/Set5", "butterfly.png"))).unsqueeze(0)
 
 
 class BaseTrainer:
     """
     Base class for all trainers
     """
-    def __init__(self, model, criterion, metric_ftns, optimizer, config):
+    def __init__(self, models, criterion, metric_ftns, optimizers, config, device, monitor_cfg_key='monitor',
+                 epochs_cfg_key='epochs'):
+        self.device = device
+        self.fixed_lr = fixed_lr.to(self.device)
+
         self.config = config
         self.logger = config.get_logger('trainer', config['trainer']['verbosity'])
 
-        self.model = model
+        self.models = models
         self.criterion = criterion
         self.metric_ftns = metric_ftns
-        self.optimizer = optimizer
+        self.optimizers = optimizers
 
         cfg_trainer = config['trainer']
-        self.epochs = cfg_trainer['epochs']
+        self.epochs = cfg_trainer[epochs_cfg_key]
+
         self.save_period = cfg_trainer['save_period']
-        self.monitor = cfg_trainer.get('monitor', 'off')
+        self.monitor = cfg_trainer.get(monitor_cfg_key, 'off')
 
         # configuration to monitor model performance and save best
         if self.monitor == 'off':
@@ -33,6 +46,7 @@ class BaseTrainer:
 
             self.mnt_best = inf if self.mnt_mode == 'min' else -inf
             self.early_stop = cfg_trainer.get('early_stop', inf)
+            self.plot_epoch_result = cfg_trainer.get('plot_epoch_result', inf)
             if self.early_stop <= 0:
                 self.early_stop = inf
 
@@ -105,48 +119,74 @@ class BaseTrainer:
         :param log: logging information of the epoch
         :param save_best: if True, rename the saved checkpoint to 'model_best.pth'
         """
-        arch = type(self.model).__name__
-        state = {
-            'arch': arch,
-            'epoch': epoch,
-            'state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-            'monitor_best': self.mnt_best,
-            'config': self.config
-        }
-        filename = str(self.checkpoint_dir / 'checkpoint-epoch{}.pth'.format(epoch))
-        torch.save(state, filename)
-        self.logger.info("Saving checkpoint: {} ...".format(filename))
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        checkpoint_path_parts = self.checkpoint_dir.parts
-        save_predictions_as_imgs(self.model, device, epoch, checkpoint_path_parts[-1])
-        if save_best:
-            best_path = str(self.checkpoint_dir / 'model_best.pth')
-            torch.save(state, best_path)
-            self.logger.info("Saving current best: model_best.pth ...")
+        for i, model in enumerate(self.models):
+            optimizer = self.optimizers[i]
+            arch = type(model).__name__
+            state = {
+                'arch': arch,
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'monitor_best': self.mnt_best,
+                'config': self.config
+            }
+            filename = str(self.checkpoint_dir / 'checkpoint-{}_epoch_{}.pth'.format(arch, epoch))
+            torch.save(state, filename)
+            self.logger.info("Saving checkpoint: {} ...".format(filename))
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            checkpoint_path_parts = self.checkpoint_dir.parts
 
-    def _resume_checkpoint(self, resume_path):
+            if save_best:
+                best_path = str(self.checkpoint_dir / f'model_{arch}_best.pth')
+                torch.save(state, best_path)
+                self.logger.info(f'Saving current best: model_{arch}_best.pth ...')
+
+        # Each one epoch create a sr image.
+        arch = type(self.models[SINGLE_KEY]).__name__
+        with torch.no_grad():
+            sr = self.models[SINGLE_KEY](self.fixed_lr)
+            vutils.save_image(
+                sr.detach(),
+                os.path.join(self.checkpoint_dir, f'checkpoint-{arch}_epoch_{epoch}.png'),
+                normalize=True
+            )
+
+    def _resume_checkpoint(self, resume_paths):
         """
         Resume from saved checkpoints
         :param resume_path: Checkpoint path to be resumed
         """
-        resume_path = str(resume_path)
-        self.logger.info("Loading checkpoint: {} ...".format(resume_path))
-        checkpoint = torch.load(resume_path)
-        self.start_epoch = checkpoint['epoch'] + 1
-        self.mnt_best = checkpoint['monitor_best']
 
-        # load architecture params from checkpoint.
-        if checkpoint['config']['arch'] != self.config['arch']:
-            self.logger.warning("Warning: Architecture configuration given in config file is different from that of "
-                                "checkpoint. This may yield an exception while state_dict is being loaded.")
-        self.model.load_state_dict(checkpoint['state_dict'])
+        for i, path in enumerate(resume_paths):
+            self.logger.info("Loading checkpoint: {} ...".format(path))
+            checkpoint = torch.load(path)
+            self.start_epoch = checkpoint['epoch'] + 1
+            self.mnt_best = checkpoint['monitor_best']
 
-        # load optimizer state from checkpoint only when optimizer type is not changed.
-        if checkpoint['config']['optimizer']['type'] != self.config['optimizer']['type']:
-            self.logger.warning("Warning: Optimizer type given in config file is different from that of checkpoint. "
-                                "Optimizer parameters not being resumed.")
-        else:
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            if 'Generator' in checkpoint['arch']:
+                key = GENERATOR_KEY
+                arch_param = 'arch_esrgan_gen'
+            elif 'Discriminator' in checkpoint['arch']:
+                key = DISCRIMINATOR_KEY
+                arch_param = 'arch_esrgan_disc'
 
-        self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
+            else:
+                key = SINGLE_KEY
+                arch_param = 'arch_single'
+
+            # load architecture params from checkpoint.
+            if checkpoint['config'][arch_param] != self.config[arch_param]:
+                self.logger.warning(
+                    "Warning: Architecture configuration given in config file is different from that of "
+                    "checkpoint. This may yield an exception while state_dict is being loaded.")
+            self.models[key].load_state_dict(checkpoint['state_dict'])
+
+            # load optimizer state from checkpoint only when optimizer type is not changed.
+            if checkpoint['config']['optimizer']['type'] != self.config['optimizer']['type']:
+                self.logger.warning(
+                    "Warning: Optimizer type given in config file is different from that of checkpoint. "
+                    "Optimizer parameters not being resumed.")
+            else:
+                self.optimizers[key].load_state_dict(checkpoint['optimizer'])
+
+            self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))

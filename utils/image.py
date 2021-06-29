@@ -91,8 +91,9 @@ def modcrop(img, modulo):
 if __name__ == '__main__':
     data_patches = []
     label_patches = []
-    num_patches = 500
-    scale = 3
+    num_patches = 100
+    scale = 4
+    target_patch_size = (64, 64)
     # dataset can be found on https://drive.google.com/drive/folders/1B3DJGQKB6eNdwuQIhdskA64qUuVKLZ9u
     path = '../data/inputs/T91/'
     dir_contents = listdir(path)
@@ -109,21 +110,13 @@ if __name__ == '__main__':
         data_image = transform.resize(downscaled_image, label_size, order=3)
         # print(f'Image ({filepath} shape: {np.shape(image_file)}')
         image_size = image_file.shape
-        target_patch_size = (192, 192)
         if (image_size[0] > target_patch_size[0]) and (image_size[1] > target_patch_size[1]):
-            data_p, label_p = create_scaled_patches(image_file, scale=3, target_patch_size=target_patch_size,
+            data_p, label_p = create_scaled_patches(image_file, scale=scale, target_patch_size=target_patch_size,
                                                     create_random_sample=True, num_patches=num_patches)
             data_patches.extend(data_p)
             label_patches.extend(label_p)
 
-    if len(data_patches) != patches_total:
-        print(f'Total number of data_patches={len(data_patches)} is not equal to '
-              f'num_patches={num_patches} * number of images={len(dir_contents)}')
     print(f'Total data patches size: {np.shape(data_patches)}')
-
-    if len(label_patches) != patches_total:
-        print(f'Total number of label_patches={len(label_patches)} is not equal to '
-              f'num_patches={num_patches} * number of images={len(dir_contents)}')
     print(f'Total label patches size: {np.shape(label_patches)}')
 
     save_patches_to_HDF5(

@@ -1,10 +1,22 @@
 {
     "name": "superresolution-cnn",
     "n_gpu": 1,
-
-    "arch": {
+    "is_gan": true,
+    "arch_single": {
         "type": "UNet",
         "args": {}
+    },
+    "arch_esrgan_disc": {
+        "type": "DiscriminatorForVGG",
+        "args": {
+            "image_size": 64
+        }
+    },
+    "arch_esrgan_gen": {
+        "type": "Generator",
+        "args": {
+            "num_rrdb_blocks": 16
+        }
     },
     "data_loader": {
         "type": "SRCNNDataloader",
@@ -24,10 +36,8 @@
             "amsgrad": false
         }
     },
-    "loss": "mse_loss",
-    "metrics": [
-        "psnr"
-    ],
+    "loss": "gen_loss",
+    "metrics": [],
     "lr_scheduler": {
         "type": "StepLR",
         "args": {
@@ -36,14 +46,18 @@
         }
     },
     "trainer": {
-        "epochs": 200,
-
+        "epochs": 100,
+        "gan_epochs": 64,
+        "psnr_epochs": 64,
+        "psnr_lr": 0.0002,
+        "gan_lr": 0.0001,
         "save_dir": "data/saved/",
         "save_period": 1,
         "verbosity": 2,
-
-        "monitor": "min val_loss",
-        "early_stop": 10,
+        "monitor": "max ssim",
+        "monitor_psnr": "max psnr",
+        "early_stop": 30,
+        "plot_epoch_result": false,
 
         "tensorboard": true
     }

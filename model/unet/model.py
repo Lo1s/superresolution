@@ -89,10 +89,14 @@ class UNet(nn.Module):
         return x
 
 
-if __name__ == '__main__':
+def test():
     test_image = torch.rand((64, 3, 64, 64))
     model = UNet()
     print(model)
     output = model(test_image)
     print(output)
     print(output.size())  # ([64, 3, 192, 192])
+
+
+if __name__ == '__main__':
+    test()
