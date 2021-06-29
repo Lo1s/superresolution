@@ -69,14 +69,14 @@ Still in progress.
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-###Dataset
+### Dataset
 
 Image patches from T91 dataset can be created by using utils/image.py script
   ```sh
   python utils/image.py
   ```
 
-###Train
+### Train
 
 Train model by using
   ```sh
