@@ -6,7 +6,7 @@ from PIL import Image
 from abc import abstractmethod
 from numpy import inf
 from logger import TensorboardWriter
-from model.esrgan.utils.utils import SINGLE_KEY, GENERATOR_KEY, DISCRIMINATOR_KEY
+from model.esrgan.utils.utils import MODEL_KEY, GENERATOR_KEY, DISCRIMINATOR_KEY
 from test import save_predictions_as_imgs
 
 # Load base low-resolution image.
@@ -142,9 +142,9 @@ class BaseTrainer:
                 self.logger.info(f'Saving current best: model_{arch}_best.pth ...')
 
         # Each one epoch create a sr image.
-        arch = type(self.models[SINGLE_KEY]).__name__
+        arch = type(self.models[MODEL_KEY]).__name__
         with torch.no_grad():
-            sr = self.models[SINGLE_KEY](self.fixed_lr)
+            sr = self.models[MODEL_KEY](self.fixed_lr)
             vutils.save_image(
                 sr.detach(),
                 os.path.join(self.checkpoint_dir, f'checkpoint-{arch}_epoch_{epoch}.png'),
@@ -171,7 +171,7 @@ class BaseTrainer:
                 arch_param = 'arch_esrgan_disc'
 
             else:
-                key = SINGLE_KEY
+                key = MODEL_KEY
                 arch_param = 'arch_single'
 
             # load architecture params from checkpoint.

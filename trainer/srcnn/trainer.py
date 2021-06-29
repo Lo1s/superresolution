@@ -7,7 +7,7 @@ from torchvision import models
 from torchvision.utils import save_image, make_grid
 from tqdm import tqdm
 from base import BaseTrainer
-from model.esrgan.utils import SINGLE_KEY
+from model.esrgan.utils import MODEL_KEY
 from model.srcnn.metric import psnr
 from model.unet.loss import create_loss_model
 from utils import inf_loop, MetricTracker
@@ -53,13 +53,13 @@ class SRCNNTrainer(BaseTrainer):
         :param epoch: Integer, current training epoch.
         :return: A log that contains average loss and metric in this epoch.
         """
-        self.models[SINGLE_KEY].train()
+        self.models[MODEL_KEY].train()
         self.train_metrics.reset()
         for batch_idx, (data, target) in enumerate(tqdm(self.data_loader)):
             data, target = data.to(self.device), target.to(self.device)
 
-            self.optimizers[SINGLE_KEY].zero_grad()
-            output = self.models[SINGLE_KEY](data)
+            self.optimizers[MODEL_KEY].zero_grad()
+            output = self.models[MODEL_KEY](data)
 
             if self.use_vgg_loss:
                 output_vgg_loss = self.vgg_loss(output)
@@ -69,7 +69,7 @@ class SRCNNTrainer(BaseTrainer):
                 loss = self.criterion(output, target)
 
             loss.backward()
-            self.optimizers[SINGLE_KEY].step()
+            self.optimizers[MODEL_KEY].step()
 
             self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
             self.train_metrics.update('loss', loss.item())
@@ -101,12 +101,12 @@ class SRCNNTrainer(BaseTrainer):
         :param epoch: Integer, current training epoch.
         :return: A log that contains information about validation
         """
-        self.models[SINGLE_KEY].eval()
+        self.models[MODEL_KEY].eval()
         self.valid_metrics.reset()
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(self.valid_data_loader):
                 data, target = data.to(self.device), target.to(self.device)
-                output = self.models[SINGLE_KEY](data)
+                output = self.models[MODEL_KEY](data)
 
                 if self.use_vgg_loss:
                     output_vgg_loss = self.vgg_loss(output)
@@ -122,7 +122,7 @@ class SRCNNTrainer(BaseTrainer):
                 self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
         # add histogram of the model parameters to the tensorboard
-        for name, p in self.models[SINGLE_KEY].named_parameters():
+        for name, p in self.models[MODEL_KEY].named_parameters():
             self.writer.add_histogram(name, p, bins='auto')
         return self.valid_metrics.result()
 

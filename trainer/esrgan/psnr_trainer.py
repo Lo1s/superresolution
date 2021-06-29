@@ -12,7 +12,7 @@ from torchvision import models
 from torchvision.utils import save_image, make_grid
 from tqdm import tqdm
 from base import BaseTrainer
-from model.esrgan.utils import SINGLE_KEY, GENERATOR_KEY
+from model.esrgan.utils import MODEL_KEY, GENERATOR_KEY
 from model.esrgan.utils.calculate_gmsd import GMSD
 from model.esrgan.utils.calculate_ssim import SSIM
 from model.srcnn.metric import psnr

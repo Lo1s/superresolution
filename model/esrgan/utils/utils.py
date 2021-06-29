@@ -16,10 +16,10 @@ import torch
 import torch.nn.functional
 
 __all__ = [
-    "gaussian_filter", "fspecial_gauss", "SINGLE_KEY", "GENERATOR_KEY", "DISCRIMINATOR_KEY"
+    "gaussian_filter", "fspecial_gauss", "MODEL_KEY", "GENERATOR_KEY", "DISCRIMINATOR_KEY"
 ]
 
-SINGLE_KEY, GENERATOR_KEY, DISCRIMINATOR_KEY = 0, 0, 1
+MODEL_KEY, GENERATOR_KEY, DISCRIMINATOR_KEY = 0, 0, 1
 
 def gaussian_filter(x: torch.Tensor, filter_weight: torch.Tensor) -> torch.Tensor:
     r"""Gaussian filtering using two dimensional convolution.
