@@ -85,7 +85,7 @@ Train model by using
 
 <!-- ROADMAP -->
 ## TODO:
-- script for video upscaling frame-by-fram using SISR model
+- script for video upscaling frame-by-frame using SISR model
 - Temporal GAN implementation (e.g. iSeeBetter, FRVSR-GAN)
 
 <!-- LICENSE -->
