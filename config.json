@@ -1,5 +1,5 @@
 {
-    "name": "superresolution-cnn",
+    "name": "superresolution",
     "n_gpu": 1,
     "is_gan": true,
     "arch_single": {

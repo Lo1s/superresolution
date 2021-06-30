@@ -15,7 +15,7 @@ import matplotlib.image as mpimg
 
 def save_predictions_as_imgs(model, device, epoch, datetime_dir, image_folder='data/inputs/Set5/*', plot_images=True):
     idx = 0
-    save_dir = f'data/saved/models/superresolution-cnn/{datetime_dir}'
+    save_dir = f'data/saved/models/superresolution/{datetime_dir}'
     if not path.exists(save_dir):
         mkdir(save_dir)
 
@@ -53,13 +53,13 @@ if __name__ == '__main__':
     default_model = UNet().to(dev)
 
     if use_best_model:
-        model_path = f'data/saved/models/superresolution-cnn/{model_date_dir}/model_best.pth'
+        model_path = f'data/saved/models/superresolution/{model_date_dir}/model_best.pth'
         print('Model path {:s}. \nTesting...'.format(model_path))
         saved_model = torch.load(model_path)
         default_model.load_state_dict(saved_model['state_dict'])
         save_predictions_as_imgs(default_model, dev, 'best', model_date_dir)
     else:
-        model_paths = glob.glob(f'data/saved/models/superresolution-cnn/{model_date_dir}/*')
+        model_paths = glob.glob(f'data/saved/models/superresolution/{model_date_dir}/*')
         checkpoints = list(filter(lambda path: 'checkpoint' in path, model_paths))
         checkpoints.sort()
         for model_path in checkpoints:

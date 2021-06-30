@@ -91,7 +91,7 @@ def modcrop(img, modulo):
 if __name__ == '__main__':
     data_patches = []
     label_patches = []
-    num_patches = 100
+    num_patches = 200
     scale = 4
     target_patch_size = (64, 64)
     # dataset can be found on https://drive.google.com/drive/folders/1B3DJGQKB6eNdwuQIhdskA64qUuVKLZ9u
