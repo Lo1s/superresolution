@@ -15,6 +15,7 @@ from skimage import transform
 from tqdm import tqdm
 
 
+# loads original images and creates smaller (default=33x33) patches from them
 def create_patches(data_imgs, label_imgs, patch_size=(33, 33), create_random_sample=False, num_patches=1000):
     data_ext_patches = sklearn_image.extract_patches_2d(
         data_imgs,
@@ -87,7 +88,6 @@ def modcrop(img, modulo):
     return result
 
 
-# loads original images and creates smaller (default=33x33) patches from them
 if __name__ == '__main__':
     data_patches = []
     label_patches = []

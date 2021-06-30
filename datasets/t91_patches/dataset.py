@@ -3,7 +3,7 @@ import h5py
 from torch.utils.data import Dataset
 
 
-class SRCNNDataset(Dataset):
+class T91PatchesDataset(Dataset):
     def __init__(self, root):
         file = h5py.File(root, mode='r')
         # train_mscale.h5 has shape (21824, 33, 33, 1) => 21824 images of size 33x33 with 1 color channel

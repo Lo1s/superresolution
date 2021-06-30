@@ -81,6 +81,7 @@ def main(config):
             logging=False,
             monitor_cfg_key='monitor_psnr'
         )
+        psnr_trainer.train()
 
         train_metrics = ['pixel_loss', 'content_loss', 'adversarial_loss', 'ssim']
         valid_metrics = ['pixel_loss', 'content_loss', 'psnr', 'ssim', 'gmsd']
@@ -100,8 +101,6 @@ def main(config):
             logging=False,
             monitor_cfg_key='monitor'
         )
-
-        psnr_trainer.train()
         esrgan_trainer.train()
 
     else:

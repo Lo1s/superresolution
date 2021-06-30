@@ -21,6 +21,7 @@ __all__ = [
 
 MODEL_KEY, GENERATOR_KEY, DISCRIMINATOR_KEY = 0, 0, 1
 
+
 def gaussian_filter(x: torch.Tensor, filter_weight: torch.Tensor) -> torch.Tensor:
     r"""Gaussian filtering using two dimensional convolution.
     Args:

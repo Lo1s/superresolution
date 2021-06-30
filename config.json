@@ -19,7 +19,7 @@
         }
     },
     "data_loader": {
-        "type": "SRCNNDataloader",
+        "type": "T91PatchesDataloader",
         "args":{
             "data_dir": "data/inputs/train_mscale_3ch.h5",
             "batch_size": 64,
@@ -48,7 +48,7 @@
     "trainer": {
         "epochs": 100,
         "gan_epochs": 64,
-        "psnr_epochs": 64,
+        "psnr_epochs": 128,
         "psnr_lr": 0.0002,
         "gan_lr": 0.0001,
         "save_dir": "data/saved/",

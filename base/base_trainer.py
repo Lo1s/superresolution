@@ -133,8 +133,6 @@ class BaseTrainer:
             filename = str(self.checkpoint_dir / 'checkpoint-{}_epoch_{}.pth'.format(arch, epoch))
             torch.save(state, filename)
             self.logger.info("Saving checkpoint: {} ...".format(filename))
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            checkpoint_path_parts = self.checkpoint_dir.parts
 
             if save_best:
                 best_path = str(self.checkpoint_dir / f'model_{arch}_best.pth')
